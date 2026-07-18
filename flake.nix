@@ -28,13 +28,21 @@
       in
       {
         devShells.default = pkgs.mkShell {
-          packages = [ python pkgs.uv ];
+          packages = [ python pkgs.uv pkgs.pyright ];
 
           env = {
             # Have uv download real CPython wheels rather than manage a Python
             # toolchain itself, and point it at the Nix python.
             UV_PYTHON_DOWNLOADS = "never";
             UV_PYTHON = python.interpreter;
+
+            # PyBoy renders via PySDL2, which by default loads the pysdl2-dll
+            # wheel's bundled SDL2 — that binary can't find the X11/Wayland
+            # client libs on NixOS, so it falls back to the "offscreen" video
+            # driver (audio plays, no window). Point PySDL2 at the properly
+            # linked nixpkgs SDL2 and use x11 (XWayland) for a real window.
+            PYSDL2_DLL_PATH = "${pkgs.SDL2}/lib";
+            SDL_VIDEODRIVER = "x11";
           };
 
           # PyTorch's PyPI wheels bundle their own CUDA runtime (cuDNN, cuBLAS,

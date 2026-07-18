@@ -6,5 +6,9 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "numpy>=2.5.1",
+    "pillow>=12.3.0",
     "pyboy>=2.7.0",
 ]
+
+[dependency-groups]
+dev = []

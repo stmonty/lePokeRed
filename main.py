@@ -7,13 +7,14 @@ from pyboy import PyBoy
 def main():
     rom = sys.argv[1]
     pyboy = PyBoy(rom, window="SDL2")
+    pyboy.set_emulation_speed(target_speed=1)
+    while pyboy.tick():
+        pass
+    # frame = np.asarray(pyboy.screen.ndarray)[:, :, :3]
+    # print(frame.shape, frame.dtype)
 
-    playing = True
-    while(playing):
-        playing = pyboy.tick()
-
-    frame = np.asarray(pyboy.screen.ndarray)[:, :, :3]
-    print(frame.shape, frame.dtype)
+    with open("states/pokeballs.state", "wb") as f:
+        pyboy.save_state(f)
 
     pyboy.stop()
 

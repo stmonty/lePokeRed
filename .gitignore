@@ -11,3 +11,11 @@ wheels/
 
 # direnv local cache
 .direnv/
+
+.DS_Store
+*.png
+*.gb
+*.gb.ram
+states/
+episodes/
+mlruns/

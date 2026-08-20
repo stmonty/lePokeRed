@@ -10,6 +10,7 @@ dependencies = [
     "numpy>=2.5.1",
     "pillow>=12.3.0",
     "pyboy>=2.7.0",
+    "torch>=2.13.0",
 ]
 
 [dependency-groups]

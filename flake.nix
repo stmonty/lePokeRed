@@ -55,9 +55,7 @@
           shellHook = ''
             echo "lePokeRed dev shell — Python ${python.version} + uv"
             # Create/refresh the local venv from pyproject.toml on entry.
-            if [ ! -d .venv ]; then
-              uv venv --python ${python.interpreter}
-            fi
+            uv sync --quiet
             source .venv/bin/activate
 
             if [ -e /run/opengl-driver/lib/libcuda.so ]; then

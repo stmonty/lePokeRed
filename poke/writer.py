@@ -5,16 +5,32 @@ from pathlib import Path
 import h5py
 import numpy as np
 
+from poke.actions import BUTTON_ORDER
+
 H, W = 144, 160
+
+EPISODE_DTYPE = np.dtype([
+    ("kind", "S8"),
+    ("name", "S24"),
+    ("success", "u1"),
+    ("species", "i2"),
+])
+
+
+def _sha1(path):
+    return hashlib.sha1(Path(path).read_bytes()).hexdigest()
 
 
 class EpisodeWriter:
-    def __init__(self, path, rom, act_frames, chunk=64):
+    def __init__(self, path, rom, state, act_frames, seed, chunk=64):
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         self.h5 = h5py.File(path, "w")
-        self.h5.attrs["rom_sha1"] = hashlib.sha1(Path(rom).read_bytes()).hexdigest()
+        self.h5.attrs["rom_sha1"] = _sha1(rom)
+        self.h5.attrs["state_sha1"] = _sha1(state)
         self.h5.attrs["pyboy_version"] = version("pyboy")
         self.h5.attrs["act_frames"] = act_frames
+        self.h5.attrs["seed"] = seed
+        self.h5.attrs["button_order"] = BUTTON_ORDER
 
         gz = {"compression": "gzip", "compression_opts": 9}
         self.frames = self.h5.create_dataset(
@@ -30,6 +46,9 @@ class EpisodeWriter:
         self.episodes = self.h5.create_dataset(
             "episodes", shape=(0, 2), maxshape=(None, 2), dtype=np.int64,
         )
+        self.meta = self.h5.create_dataset(
+            "episode_meta", shape=(0,), maxshape=(None,), dtype=EPISODE_DTYPE,
+        )
 
         self.n = 0
         self._buf = []
@@ -37,7 +56,7 @@ class EpisodeWriter:
     def add_step(self, frame, action, party_count):
         self._buf.append((frame, action, party_count))
 
-    def end_episode(self):
+    def end_episode(self, kind="", name="", success=False, species=-1):
         if not self._buf:
             return
         t = len(self._buf)
@@ -52,6 +71,8 @@ class EpisodeWriter:
         e = self.episodes.shape[0]
         self.episodes.resize(e + 1, axis=0)
         self.episodes[e] = (self.n, t)
+        self.meta.resize(e + 1, axis=0)
+        self.meta[e] = (kind.encode(), name.encode(), int(success), species)
 
         self.n += t
         self._buf = []

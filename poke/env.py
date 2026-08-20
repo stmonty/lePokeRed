@@ -25,7 +25,8 @@ class PokeEnv:
         button = to_button(action_idx)
         if button:
             self.pyboy.button_press(button)
-            self.pyboy.tick(self.hold, render=False)
+        self.pyboy.tick(self.hold, render=False)
+        if button:
             self.pyboy.button_release(button)
         self.pyboy.tick(self.settle, render=True)
         return self.screen()

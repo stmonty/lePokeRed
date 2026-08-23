@@ -9,7 +9,7 @@ from poke.writer import EpisodeWriter
 
 NOOP = ACTIONS.index("noop")
 
-# from states/pokeballs.state the player faces the middle ball
+# from states/pokeballs.state the player faces the middle ball (which is Squirtle)
 BALL_PREFIX = {
     "charmander": ["left", "up"],
     "squirtle": [],

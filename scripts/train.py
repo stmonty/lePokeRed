@@ -7,14 +7,15 @@ from poke.splits import episode_split
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
+from pathlib import Path
 
 @dataclass
 class DefaultConfig:
     data_path: str = "episodes/poke.h5"
     num_frames: int = 4
     batch_size: int = 16
-    epochs: int = 1
+    epochs: int = 10
     learning_rate: float = 3e-4
     weight_decay: float = 0.05
     regularizer_weight: float = 0.1
@@ -116,6 +117,35 @@ def train_one_epoch(
     averages = loss_sums / number_of_samples
     return tuple(averages.cpu().tolist())
 
+def save_checkpoint(
+    path: Path,
+    model: JEPA,
+    reg: SIGReg,
+    optimizer: Optimizer,
+    config: DefaultConfig,
+    epoch: int,
+    global_step: int,
+    train_losses: tuple[float, float, float],
+    val_losses: tuple[float, float, float],
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = path.with_suffix(path.suffix + ".tmp")
+
+    t.save(
+        {
+            "epoch": epoch,
+            "global_step": global_step,
+            "config": asdict(config),
+            "jepa": model.state_dict(),
+            "sigreg": reg.state_dict(),
+            "optimizer": optimizer.state_dict(),
+            "train_losses": train_losses,
+            "val_losses": val_losses,
+        },
+        temporary_path,
+    )
+    temporary_path.replace(path)
+
 def main() -> None:
     config = DefaultConfig()
     t.manual_seed(config.seed)
@@ -130,6 +160,9 @@ def main() -> None:
     print(f"train windows: {len(train_loader.dataset)}")
     print(f"validation windows: {len(val_loader.dataset)}")
     print(f"parameters: {sum(p.numel() for p in model.parameters()):,}")
+
+    checkpoint_dir = Path("checkpoints")
+    best_val_loss = float("inf")
 
     for epoch in range(config.epochs):
         train_losses = train_one_epoch(
@@ -158,6 +191,36 @@ def main() -> None:
             f"pred={val_losses[1]:.4f} "
             f"reg={val_losses[2]:.4f}"
         )
+
+        completed_epoch = epoch + 1
+        global_step = completed_epoch * len(train_loader)
+
+        save_checkpoint(
+            checkpoint_dir / "last.pt",
+            model,
+            reg,
+            optimizer,
+            config,
+            completed_epoch,
+            global_step,
+            train_losses,
+            val_losses,
+        )
+
+        if val_losses[0] < best_val_loss:
+            best_val_loss = val_losses[0]
+            save_checkpoint(
+                checkpoint_dir / "best.pt",
+                model,
+                reg,
+                optimizer,
+                config,
+                completed_epoch,
+                global_step,
+                train_losses,
+                val_losses,
+            )
+            print(f"saved new best checkpoint: {checkpoint_dir / 'best.pt'}")
 
 if __name__ == "__main__":
     main()

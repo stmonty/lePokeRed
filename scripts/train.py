@@ -6,6 +6,7 @@ from poke.dataset import PokeDataset
 from poke.splits import episode_split
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
+from tqdm.auto import tqdm
 from dataclasses import dataclass
 
 @dataclass
@@ -62,7 +63,7 @@ def validate(model: JEPA, reg: SIGReg, loader: DataLoader, device: t.device, reg
     loss_sums = t.zeros(3, device=device)
     number_of_samples = 0
 
-    for batch in loader:
+    for batch in tqdm(loader, desc="validation", unit="batch", leave=False):
         batch = {
             name: tensor.to(device, non_blocking=True)
             for name, tensor in batch.items()
@@ -89,7 +90,9 @@ def train_one_epoch(
     loss_sums = t.zeros(3, device=device)
     number_of_samples = 0
 
-    for batch in loader:
+    progress = tqdm(loader, desc="training", unit="batch")
+
+    for batch_index, batch in enumerate(progress, start=1):
         batch = {
             name: tensor.to(device, non_blocking=True)
             for name, tensor in batch.items()
@@ -101,6 +104,14 @@ def train_one_epoch(
 
         loss_sums += t.stack(losses) * batch_size
         number_of_samples += batch_size
+
+        if batch_index % 10 == 0 or batch_index == len(loader):
+            running_averages = loss_sums / number_of_samples
+            progress.set_postfix(
+                total=f"{running_averages[0].item():.4f}",
+                pred=f"{running_averages[1].item():.4f}",
+                reg=f"{running_averages[2].item():.4f}",
+            )
 
     averages = loss_sums / number_of_samples
     return tuple(averages.cpu().tolist())

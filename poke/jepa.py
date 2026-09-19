@@ -45,8 +45,11 @@ class JEPA(nn.Module):
         embeddings = einops.rearrange(flat_embeddings, "(b t) d -> b t d", b=B, t=T)
         return embeddings
 
-    @torch.no_grad()
-    def rollout(self, initial: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
+    def predict_rollout(
+        self,
+        initial: torch.Tensor,
+        actions: torch.Tensor,
+    ) -> torch.Tensor:
         # initial: [B, D]
         # actions: [B, H, 6]
         # result: [B, H, D], where H is the planning horizon. Basically how many future states produced per rollout
@@ -71,3 +74,8 @@ class JEPA(nn.Module):
         
         # Remove the original state given, returning only the predicted states
         return states[:, 1:]
+
+    @torch.no_grad()
+    def rollout(self, initial: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
+        """Predict future embeddings without building a gradient graph."""
+        return self.predict_rollout(initial, actions)
